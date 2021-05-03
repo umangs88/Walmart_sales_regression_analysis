@@ -1,0 +1,482 @@
+---
+title: "R Notebook"
+output:
+  html_notebook:
+    code_folding: hide
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+
+# This chunk shows/hides the code in your final report. When echo = TRUE, the code
+# is shown in the report. When echo = FALSE, the code is hidden from the final report.
+# We would like to see your code, so please leave the setting as is during the course.
+# This chunk will not show up in your reports, so you can safely ignore its existence.
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+The following is your first chunk to start with. Remember, you can add chunks using the menu
+above (Insert -> R) or using the keyboard shortcut Ctrl+Alt+I. A good practice is to use
+different code chunks to answer different questions. You can delete this comment if you like.
+
+Other useful keyboard shortcuts include Alt- for the assignment operator, and Ctrl+Shift+M
+for the pipe operator. You can delete these reminders if you don't want them in your report.
+
+# **Lab 2**
+
+***
+
+```{r}
+# Load required libraries
+library(tidyverse)
+library(tidymodels)
+library(plotly)
+library(skimr)
+
+library(lubridate) #Be careful if you load this in the first chunk because it masks the setdiff function
+
+```
+
+
+```{r}
+#Reading the Walmart dataset
+dfw <- read_csv("walmartSales.csv")
+
+```
+
+```{r}
+#Descriptive stats
+#head(dfw)
+#str(dfw)
+#glimpse(dfw)
+skim(dfw)
+
+```
+
+***
+
+### Question 1
+# Create a regression model using Weekly_Sales as the DV (Dependent Variable, outcome variable), and CPI as the IV (Independent Variable, feature, predictor, explanatory variable).
+
+
+
+
+```{r}
+# Regress CPI on Weekly_Sales
+fitCPI <- lm(data=dfw, Weekly_Sales~CPI)
+summary(fitCPI)
+
+```
+
+***
+
+### Question 2
+# For Store 10, create a scatter plot of the relationship between CPI and Weekly_Sales. Add a regression line to this plot. What do you observe? Does it align with your interpretation in Q1? Now, try it for Store 11, Store 12, and Store 13. What do you think is going on here?
+
+```{r}
+#Creating a scatter plot of CPI vs Weekly_Sales for Store 10
+plot <- dfw %>%
+      		filter(Store==10) %>%
+      	    ggplot(aes(x=CPI, y = Weekly_Sales)) +
+      	    geom_point() +
+       		  geom_smooth(method=lm)
+
+ggplotly(plot)
+
+```
+
+```{r}
+#Creating a scatter plot of CPI vs Weekly_Sales for Store 13
+plot <- dfw %>%
+      		filter(Store==13) %>%
+      	    ggplot(aes(x=CPI, y = Weekly_Sales)) +
+      	    geom_point() +
+       		  geom_smooth(method=lm)
+
+ggplotly(plot)
+
+```
+
+***
+
+### Question 3
+# Now, filter for the year 2012 instead of a store (so, you’ll plot data from all stores in a year). For this, you will need to (install and) load the lubridate library.
+```{r}
+#Applying a filter for 2012 and plotting CPI against Weekly_Sales
+#You could also use the following filter: Date>='2012-01-01' & Date <= '2012-12-31'
+
+plot <- dfw %>%
+	      	filter(year(Date) == 2012) %>%
+	          ggplot(aes(x=CPI, y = Weekly_Sales)) +
+	          geom_point() +
+ 	        	geom_smooth(method=lm)
+    
+ggplotly(plot)
+
+
+```
+
+***
+
+### Question 4
+# Now, create a plot. Did you know that you can use multiple arguments in one filter function. Compared to the earlier plots, do you notice a difference in the range of CPI? Why is it so?
+
+```{r}
+#Plotting the sales of Store 10 over a period of a year
+#You could also use the following filter: Date>='2012-01-01' & Date <= '2012-12-31'
+plot <- dfw %>%
+      		filter(Store==10, year(Date)==2012) %>%
+      	    ggplot(aes(x=CPI, y = Weekly_Sales)) +
+      	    geom_point() +
+            geom_smooth(method=lm)
+
+ggplotly(plot)
+
+```
+
+***
+
+### Question 5
+# Build another regression model but this time include both CPI and Size as independent variables and call it fitCPISize.
+
+```{r}
+#Regressing Weekly_Sales using CPI and Size as our independent variable
+fitCPISize <- lm(Weekly_Sales~ CPI + Size, data=dfw)
+
+summary(fitCPISize)
+
+```
+
+```{r}
+#Comparing the 2 models and checking if adding Size leads to a statistically significant improvement
+anova(fitCPI, fitCPISize)
+
+```
+
+***
+
+### Question 6
+# Has the estimated coefficient for CPI changed? If so, why do you think it has changed?
+
+## Yes, the estimated coefficient for CPI changed to -657.Because of the addition one more independent variable to the analysis which causes the dependence of weekly sales on CPI to change. It now depends on the CPI value and the size of the store
+
+```{r}
+#Comparing the outputs of two models. You can also create a comparison table using tidy()
+summary(fitCPI)
+summary(fitCPISize)
+
+```
+
+***
+
+### Question 7
+# Let’s build a full model now and call it fitFull. This time, include all the variables in the dataset and report your observations.
+
+```{r}
+#Regressing Weekly_Sales using all variables except Store and Date
+fitFull <- lm(Weekly_Sales~ .-Store -Date, data=dfw)
+summary(fitFull)
+
+```
+
+```{r}
+#Comparing the model built in Question 5 with model built in Question 7
+anova(fitCPISize, fitFull)
+
+```
+
+***
+
+### Question 8
+
+```{r}
+#Regressing Weekly_Sales using all variables including Temperature^2 except Store and Date
+fitFullTemp <- lm(Weekly_Sales~ . -Store -Date +I(Temperature^2), data=dfw)
+summary(fitFullTemp)
+
+```
+
+```{r}
+## Plotting the relationship between Temperature^2 and Weekly Sales 
+dfw %>%
+  ggplot(aes(x=Temperature, y=Weekly_Sales)) + 
+  geom_smooth(method = "lm", formula = y~x + I(x^2))
+
+```
+
+
+***
+
+### Question 9
+
+## Part a and b
+
+```{r}
+#Use one of the following to release setdiff function from lubridate:
+# => dplyr::setdiff
+# => detach('package:lubridate', unload=TRUE)
+
+#Setting the seed
+set.seed(333)
+
+#Creating the training dataset by random sampling 80% of the data
+dfwTrain <- dfw %>% sample_frac(.8)
+
+#Assigning the difference to the test set
+dfwTest <- dplyr::setdiff(dfw, dfwTrain)
+
+```
+
+## Part c
+
+```{r}
+#Building the model only on the training data set
+
+fitOrg <- lm(Weekly_Sales~ .+ I(Temperature^2) -Store -Date, data=dfwTrain)
+summary(fitOrg)
+
+```
+
+## Part d
+
+```{r}
+#Creating a new dataframe resultsOrg with an additional column containing predicted values
+resultsOrg <- dfwTest %>%
+                mutate(predictedSales = predict(fitOrg, dfwTest))
+
+```
+
+
+## Part e
+
+```{r}
+#Defining the metrics we be calculating using the metric_set()
+performance <- metric_set(rmse, mae)
+
+```
+
+```{r}
+#Calculating performance measures
+performance(resultsOrg, truth =  Weekly_Sales, estimate = predictedSales)
+
+```
+
+## Part f
+
+```{r}
+#Building the model including Date variable using only on the training data set
+
+fitOrgDate <- lm(Weekly_Sales~ .+ I(Temperature^2) -Store, data=dfwTrain)
+summary(fitOrgDate)
+
+#Creating a new dataframe resultsOrg with an additional column containing predicted values
+resultsOrgDate <- dfwTest %>%
+                mutate('predictedSales' = predict(fitOrgDate, dfwTest))
+
+#Calculating performance measures
+performance(resultsOrgDate, truth =  Weekly_Sales, estimate = predictedSales)
+
+#Comparing the models
+anova(fitOrg, fitOrgDate)
+
+```
+
+## Part g
+
+```{r}
+#Building the model including Date variable using only on the training data set
+fitOrgNoUn <- lm(Weekly_Sales~ .+ I(Temperature^2) -Store -Date -Unemployment, data=dfwTrain)
+summary(fitOrgNoUn)
+
+#Creating a new dataframe resultsOrg with an additional column containing predicted values
+resultsOrgNoUn <- dfwTest %>%
+                mutate('predictedSales' = predict(fitOrgNoUn, dfwTest))
+
+#Calculating performance measures
+performance(resultsOrgNoUn, truth =  Weekly_Sales, estimate = predictedSales)
+
+#Comparing the models
+anova(fitOrg, fitOrgNoUn)
+
+```
+
+***
+
+### Question 10a
+
+```{r}
+#Creating a new variable called logSalesPerSqft
+dfwlog <- dfw %>%
+        mutate(logSalesPerSqft = log(Weekly_Sales))
+
+```
+
+
+```{r}
+#Setting the seed
+set.seed(333)
+
+#Creating the training dataset by random sampling 80% of the data
+dfwlogTrain <- dfwlog %>% sample_frac(.8)
+
+#Assigning the difference to the test set
+dfwlogTest <- dplyr::setdiff(dfwlog, dfwlogTrain)
+
+```
+
+
+```{r}
+#Building the model using logSalesPerSqft variable as Dependent variable using only on the training data set
+
+fitLog <- lm(logSalesPerSqft~ .+ I(Temperature^2) -Store -Date, data=dfwlogTrain)
+summary(fitLog)
+
+#Creating a new dataframe resultsOrg with an additional column containing predicted values
+resultsSalesSqft <- dfwlogTest %>%
+                      mutate(predictedSales = predict(fitLog, dfwlogTest))
+
+#Calculating performance measures
+performance(resultsSalesSqft, truth = logSalesPerSqft, estimate = predictedSales)
+
+```
+
+
+### Question 10a
+
+```{r}
+#Essential diagnostics:
+
+plot(fitOrg)
+plot(fitLog)
+
+```
+
+```{r}
+library(modelr) # add_residuals is from the modelr package. modelr comes with tidyverse but doesn't load
+
+#Read carefully the output of this chunk. Loading modelr masks some of the functions we were using earlier.
+#You may want to unload it when you are done with the library, so that you can use the masked functions.
+
+```
+
+
+```{r}
+# Check for autocorrelation
+dfwTest %>% 
+  add_residuals(fitOrg) %>%
+  ggplot(aes(Date, resid)) +
+  geom_line()
+
+dfwlogTest %>% 
+  add_residuals(fitLog) %>%
+  ggplot(aes(Date, resid)) +
+  geom_line()
+
+
+#Use this when you are done with the modelr package:
+detach('package:modelr', unload=TRUE)
+
+```
+
+
+```{r}
+#Can you add residuls to your test dataset manually? Try below. Remember, resultsOrg has both actual sales and predicted sales. All you need to do is to create a variable storing their differences. That is your residuals.
+
+
+```
+
+
+```{r}
+#Load the library needed for the collinearity check
+library(car)
+
+```
+
+```{r}
+#Check for multicollinearity
+
+vif(fitOrg)
+vif(fitLog)
+
+```
+
+
+```{r}
+tidy(fitOrg)
+
+```
+
+
+***
+
+### Bonus Question
+
+```{r}
+#Creating a new variable called SalesPerSqft
+dfwsqft <- dfw %>%
+        mutate('SalesPerSqft' = Weekly_Sales/Size)
+
+```
+
+
+```{r}
+#Setting the seed
+set.seed(333)
+
+#Creating the training dataset by random sampling 80% of the data
+dfwsqftTrain <- dfwsqft %>% sample_frac(.8)
+
+#Assigning the difference to the test set
+dfwsqftTest <- dplyr::setdiff(dfwsqft, dfwsqftTrain)
+
+```
+
+
+```{r}
+#Building the model using SalesPerSqft variable as Dependent variable using only on the training data set
+
+fitSalesSqFoot <- lm(SalesPerSqft~ . -Store -Date -Size -Weekly_Sales +I(Temperature^2), data=dfwsqftTrain)
+summary(fitSalesSqFoot)
+
+#Creating a new dataframe resultsOrg with an additional column containing predicted values
+resultsSalesSqft <- dfwsqftTest %>%
+                      mutate(predictedSales = predict(fitSalesSqFoot, dfwsqftTest))
+
+#Calculating performance measures
+performance(resultsSalesSqft, truth = SalesPerSqft , estimate = predictedSales)
+
+```
+
+***
+
+```{r}
+#Creating a tibble from the regression output
+tidy(fitOrg)
+
+```
+
+
+```{r}
+#How to run individual regressions by group, for each group's data and extract coefficients and standard errors:
+
+dfwTrain %>% 
+  group_by(Store) %>%
+  group_modify(~tidy(lm(Weekly_Sales ~ ., data=.x))) %>% 
+  filter(term == 'Temperature')
+
+```
+
+
+```{r}
+#How to calculate heteroskedasticity-robust standard errors:
+
+library(lmtest)
+library(sandwich)
+
+coeftest(fitOrg, vcov = vcovHC(fitOrg, type="HC1"))
+
+```
